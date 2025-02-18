@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBPT - OM Assessoria Contábil Ltda</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        label, select, input, button { display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h2>De olho no imposto - Ref. IBPT</h2>
+    
+    <label for="valorBruto">Valor Bruto da Nota (R$):</label>
+    <input type="text" id="valorBruto" placeholder="R$ 0,00" oninput="formatCurrency(this); calcularAliquotas()">
+    
+    <label for="codigoServico">Código do Serviço:</label>
+    <select id="codigoServico" onchange="calcularAliquotas()">
+        <option value="" disabled selected>Selecione o código...</option>
+        <option value="04030" data-federal="13.45" data-municipal="3.25">04030 - Serviços Médicos | 13.45% | 3.25%</option>
+	<option value="05762" data-federal="13.45" data-municipal="2.08">05762 - Outros serviços de instrução, treinamento, orientação pedagógica e educacional, avaliação de conhecimentos | 13.45% | 2.08%</option>
+    </select>
+    <label for="retencao">Há retenção na fonte?</label>
+    <select id="retencao" onchange="calcularAliquotas()">
+        <option value="nao">Não</option>
+        <option value="irrf">Apenas IRRF</option>
+        <option value="completo">IRRF, Pis, Cofins e CSLL</option>
+    </select>
+    
+    <h3>Resultado:</h3>
+    <p id="resultado"></p>
+    
+    <button onclick="copiarTexto()">Copiar</button>
+    
+    <script>
+        function formatCurrency(input) {
+            let value = input.value.replace(/\D/g, "");
+            value = (parseFloat(value) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            input.value = "R$ " + value;
+        }
+        
+        function calcularAliquotas() {
+            let select = document.getElementById("codigoServico");
+            let selectedOption = select.options[select.selectedIndex];
+            if (!selectedOption.value) return;
+            
+            let aliquotaFederal = parseFloat(selectedOption.dataset.federal);
+            let aliquotaMunicipal = parseFloat(selectedOption.dataset.municipal);
+            
+            let valorBruto = document.getElementById("valorBruto").value.replace(/[^0-9,]/g, "").replace(",", ".");
+            valorBruto = parseFloat(valorBruto);
+            
+            if (isNaN(valorBruto)) {
+                document.getElementById("resultado").innerHTML = "";
+                return;
+            }
+            
+            let valorFederal = (valorBruto * (aliquotaFederal / 100)).toFixed(2).replace(".", ",");
+            let valorMunicipal = (valorBruto * (aliquotaMunicipal / 100)).toFixed(2).replace(".", ",");
+            
+            let retencao = document.getElementById("retencao").value;
+            let resultadoTexto = "O texto deverá ser colado no campo discriminação, na última linha (clique no botão 'Copiar' e cole na nfs-e)";
+            let tributoTexto = `Trib aprox R$ ${valorFederal} Federal e R$ ${valorMunicipal} Municipal (Fonte: Versão IBPT: 25.1.B)`;
+            
+            if (retencao === "irrf" || retencao === "completo") {
+                tributoTexto += `<br><br>Retenções na Fonte`;
+                let irrf = (valorBruto * 0.015).toFixed(2).replace(".", ",");
+                tributoTexto += `<br>IRRF - R$ ${irrf}`;
+            }
+            
+            if (retencao === "completo") {
+                let pis = (valorBruto * 0.0065).toFixed(2).replace(".", ",");
+                let cofins = (valorBruto * 0.03).toFixed(2).replace(".", ",");
+                let csll = (valorBruto * 0.01).toFixed(2).replace(".", ",");
+                tributoTexto += `<br>Pis - R$ ${pis}`;
+                tributoTexto += `<br>Cofins - R$ ${cofins}`;
+                tributoTexto += `<br>CSLL - R$ ${csll}`;
+            }
+            
+            resultadoTexto += `<br>${tributoTexto}`;
+            document.getElementById("resultado").innerHTML = resultadoTexto;
+        }
+        
+        function copiarTexto() {
+            let resultadoElement = document.getElementById("resultado").innerHTML;
+            let linhas = resultadoElement.split("<br>");
+            let textoCopiar = linhas[1].replace(/<[^>]+>/g, "").trim();
+            
+            navigator.clipboard.writeText(textoCopiar).then(() => {
+                alert("Texto copiado para a área de transferência!");
+            });
+        }
+    </script>
+</body>
+</html>
